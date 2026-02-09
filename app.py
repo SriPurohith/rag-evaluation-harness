@@ -79,11 +79,10 @@ with gr.Blocks() as demo:
         outputs=[output_text, output_table]
     )
 
-# 3. Launching with Gradio 6.0 Parameters
+# 3. Launching with Gradio 6.0 Parameters (Fixed)
 if __name__ == "__main__":
     demo.launch(
         server_name="0.0.0.0",
         server_port=7860,
-        theme=gr.themes.Soft(), # Theme moved here as per Gradio 6.0 requirement
-        show_api=False
+        theme=gr.themes.Soft()
     )
