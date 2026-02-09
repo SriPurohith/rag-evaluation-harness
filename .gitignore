@@ -1,0 +1,20 @@
+# Virtual Environment
+.venv/
+venv/
+env/
+
+# Environment Secrets (Crucial!)
+.env
+
+# Python Caching
+__pycache__/
+*.py[cod]
+
+# AI/Vector Database Local Files
+chroma_db/
+*.db
+*.log
+
+# OS Files
+.DS_Store
+Thumbs.db
