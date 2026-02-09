@@ -16,4 +16,5 @@ jobs:
       - name: Push to hub
         env:
           HF_TOKEN: ${{ secrets.RAGS_WRITE_TOKEN }}
-        run: git push --force https://sri_p:$HF_TOKEN@huggingface.co/spaces/sri_p/policy-qa-eval-harness main
+        # We use $HF_TOKEN here because that's the name we gave it in 'env' above
+        run: git push --force https://SriPurohith:$HF_TOKEN@huggingface.co/spaces/SriPurohith/policy-qa-eval-harness main
