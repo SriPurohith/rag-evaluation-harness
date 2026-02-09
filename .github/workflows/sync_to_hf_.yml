@@ -12,7 +12,8 @@ jobs:
         with:
           fetch-depth: 0
           lfs: true
+
       - name: Push to hub
         env:
           HF_TOKEN: ${{ secrets.RAGS_WRITE_TOKEN }}
-run: git push --force https://sri_p:$RAGS_WRITE_TOKEN@huggingface.co/spaces/sri_p/policy-qa-eval-harness master:main
+        run: git push --force https://sri_p:$HF_TOKEN@huggingface.co/spaces/sri_p/policy-qa-eval-harness main
