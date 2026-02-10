@@ -44,10 +44,11 @@ def predict(question):
         # Threshold 0.5: Anything less than 50% grounded is blocked
         hallucination_metric = HallucinationMetric(threshold=0.5)
         test_case = LLMTestCase(
-            input=question,
-            actual_output=raw_answer,
-            retrieval_context=contexts
-        )
+                    input=question,
+                    actual_output=raw_answer,
+                    context=contexts,
+                    retrieval_context=contexts
+                )
         hallucination_metric.measure(test_case)
         
         # 3. RAGAS Metrics (Statistical Quality)
@@ -93,7 +94,11 @@ with gr.Blocks(title="Policy-QA Eval Harness", theme=gr.themes.Soft()) as demo:
         output_text = gr.Markdown(label="Response")
         chat_btn = gr.Button("Submit")
         # Link the button to your predict function
-        chat_btn.click(fn=predict, inputs=input_box, outputs=[output_text])
+        chat_btn.click(
+            fn=predict, 
+            inputs=input_box, 
+            outputs=[output_text, metrics_table]
+        )
     
     with gr.Tab("📊 Quality Engineering"):
         # Code for your RAGAS table goes here
@@ -105,7 +110,7 @@ with gr.Blocks(title="Policy-QA Eval Harness", theme=gr.themes.Soft()) as demo:
         audit_btn = gr.Button("🚀 Start Security Audit")
         audit_logs = gr.Code(label="Live Audit Logs")
         audit_btn.click(fn=run_deepeval_audit, outputs=audit_logs)
-        
+
 # 3. Secure Launch
 if __name__ == "__main__":
     demo.launch(
