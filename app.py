@@ -7,6 +7,9 @@ from src.evaluator import run_evaluation
 from deepeval.metrics import HallucinationMetric
 from deepeval.test_case import LLMTestCase
 
+os.environ["DEEPEVAL_TELEMETRY"] = "False"
+os.environ["PYTHONPATH"] = "."  # Helps deepeval find your 'src' folder
+
 # Initialize RAG
 try:
     rag_chain, retriever = initialize_rag("data/company_policy.pdf")
@@ -15,11 +18,10 @@ except Exception as e:
     rag_chain, retriever = None, None
 
 def run_deepeval_audit():
-    """Triggers the DeepEval CLI and captures the terminal output."""
     try:
-        # We use 'python -m deepeval' for better compatibility in container environments
+        # Change from ["python", "-m", "deepeval", ...] to this:
         result = subprocess.run(
-            ["python", "-m", "deepeval", "test", "run", "test_deepeval.py"],
+            ["deepeval", "test", "run", "test_deepeval.py"],
             capture_output=True,
             text=True,
             timeout=120 
