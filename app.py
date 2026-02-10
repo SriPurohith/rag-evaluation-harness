@@ -18,7 +18,6 @@ except Exception as e:
     rag_chain, retriever = None, None
 
 def run_deepeval_audit():
-def run_deepeval_audit():
     try:
         current_dir = os.path.dirname(os.path.abspath(__file__))
         test_file_path = os.path.join(current_dir, "test_deepeval.py")
