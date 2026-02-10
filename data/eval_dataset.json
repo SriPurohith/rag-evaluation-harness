@@ -1,0 +1,14 @@
+[
+  {
+    "question": "What are the eligibility rules for Full Remote status?",
+    "ground_truth": "Employees must reside within 100 miles of a regional hub like Spokane or Charlotte."
+  },
+  {
+    "question": "What is the minimum internet speed for remote work?",
+    "ground_truth": "The minimum required internet speed is 50 Mbps."
+  },
+  {
+    "question": "Which LLMs are approved for code assistance?",
+    "ground_truth": "Gemini and GPT-4 are the approved LLMs for code assistance."
+  }
+]

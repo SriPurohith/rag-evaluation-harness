@@ -111,7 +111,14 @@ with gr.Blocks(title="Policy-QA Eval Harness") as demo:
         inputs=input_text, 
         outputs=[output_text, output_table]
     )
-
+    gr.Examples(
+        examples=[
+            ["What is the residency rule for Full Remote status?"],
+            ["What is the policy on pasting API keys into AI tools?"],
+            ["Can I work remotely if I live in Spokane?"]
+        ],
+        inputs=input_text
+    )
 # 3. Secure Launch
 if __name__ == "__main__":
     demo.launch(
