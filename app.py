@@ -22,26 +22,24 @@ def run_deepeval_audit():
         current_dir = os.path.dirname(os.path.abspath(__file__))
         test_file_path = os.path.join(current_dir, "test_deepeval.py")
         
-        # We add 'env={"TERM": "dumb"}' to stop DeepEval from trying to draw 
-        # fancy tables that don't work in a web browser.
         result = subprocess.run(
             ["deepeval", "test", "run", test_file_path],
             capture_output=True,
             text=True,
             timeout=180,
             cwd=current_dir,
-            env={**os.environ, "TERM": "dumb"} 
+            env={**os.environ, "TERM": "dumb"}
         )
         
-        # Return the output. We use 'result.stdout + result.stderr' 
-        # so we can see the exact error if it fails again.
-        if result.returncode == 0:
+        # We check result.stdout because even if tests fail (code 1), 
+        # the table is still printed there.
+        if "Test Results" in result.stdout:
             return result.stdout
         else:
-            return f"⚠️ Audit failed with exit code {result.returncode}:\n\nSTDOUT:\n{result.stdout}\n\nSTDERR:\n{result.stderr}"
+            return f"⚠️ System Error:\n{result.stderr}"
             
     except Exception as e:
-        return f"❌ Failed to trigger audit: {str(e)}"
+        return f"❌ Audit Launch Failed: {str(e)}"
     
 def predict(question):
     if not os.getenv("OPENAI_API_KEY"):
