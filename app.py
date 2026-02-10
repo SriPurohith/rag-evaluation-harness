@@ -19,26 +19,27 @@ except Exception as e:
 
 def run_deepeval_audit():
     try:
-        # 1. Dynamically find the folder where app.py is located
         current_dir = os.path.dirname(os.path.abspath(__file__))
         test_file_path = os.path.join(current_dir, "test_deepeval.py")
         
-        # 2. Debugging: List files if it still fails so we can see the 'truth'
-        if not os.path.exists(test_file_path):
-            files_in_dir = os.listdir(current_dir)
-            return f"❌ Error: File not found.\nLooking in: {current_dir}\nFound files: {files_in_dir}"
-
-        # 3. Run the audit using the guaranteed absolute path
+        # We add 'env={"TERM": "dumb"}' to stop DeepEval from trying to draw 
+        # fancy tables that don't work in a web browser.
         result = subprocess.run(
             ["deepeval", "test", "run", test_file_path],
             capture_output=True,
             text=True,
             timeout=180,
-            cwd=current_dir # Force the command to run in the app's home folder
+            cwd=current_dir,
+            env={**os.environ, "TERM": "dumb"} 
         )
         
-        # Return stdout or the error if it crashed
-        return result.stdout if result.returncode == 0 else f"⚠️ Audit Error:\n{result.stderr}"
+        # Return the output. We use 'result.stdout + result.stderr' 
+        # so we can see the exact error if it fails again.
+        if result.returncode == 0:
+            return result.stdout
+        else:
+            return f"⚠️ Audit failed with exit code {result.returncode}:\n\nSTDOUT:\n{result.stdout}\n\nSTDERR:\n{result.stderr}"
+            
     except Exception as e:
         return f"❌ Failed to trigger audit: {str(e)}"
     
