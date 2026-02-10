@@ -52,7 +52,8 @@ def predict(question):
         ragas_report = run_evaluation(question, raw_answer, contexts, "Refer to policy.")
 
         # 4. Security Decision Logic
-        if hallucination_metric.score < 0.5:
+        # Block if the hallucination score is TOO HIGH (greater than 0.5)
+        if hallucination_metric.score > 0.5: 
             final_answer = (
                 f"🛡️ [SECURITY BLOCK]: DeepEval flagged this response.\n\n"
                 f"**Reason:** {hallucination_metric.reason}"
@@ -70,7 +71,7 @@ def predict(question):
                 round(ragas_report['answer_relevancy'].iloc[0], 2)
             ],
             "Status": [
-                "✅ Pass" if hallucination_metric.score >= 0.5 else "❌ Fail",
+                "✅ Pass" if hallucination_metric.score <= 0.5 else "❌ Fail",  
                 "✅ Pass" if ragas_report['faithfulness'].iloc[0] >= 0.4 else "⚠️ Low",
                 "N/A"
             ]
