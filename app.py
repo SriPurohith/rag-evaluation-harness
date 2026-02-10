@@ -19,21 +19,25 @@ except Exception as e:
 
 def run_deepeval_audit():
     try:
-        # Get the absolute path to the test file
-        # This ensures the CLI finds it regardless of where the command is triggered
-        abs_test_path = os.path.abspath("test_deepeval.py")
+        # 1. Dynamically find the folder where app.py is located
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        test_file_path = os.path.join(current_dir, "test_deepeval.py")
         
-        # Verify the file actually exists before running
-        if not os.path.exists(abs_test_path):
-            return f"❌ Error: {abs_test_path} not found in container root."
+        # 2. Debugging: List files if it still fails so we can see the 'truth'
+        if not os.path.exists(test_file_path):
+            files_in_dir = os.listdir(current_dir)
+            return f"❌ Error: File not found.\nLooking in: {current_dir}\nFound files: {files_in_dir}"
 
+        # 3. Run the audit using the guaranteed absolute path
         result = subprocess.run(
-            ["deepeval", "test", "run", abs_test_path],
+            ["deepeval", "test", "run", test_file_path],
             capture_output=True,
             text=True,
-            timeout=180 # Increased timeout for cloud environment
+            timeout=180,
+            cwd=current_dir # Force the command to run in the app's home folder
         )
         
+        # Return stdout or the error if it crashed
         return result.stdout if result.returncode == 0 else f"⚠️ Audit Error:\n{result.stderr}"
     except Exception as e:
         return f"❌ Failed to trigger audit: {str(e)}"
