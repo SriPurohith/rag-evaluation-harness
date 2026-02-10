@@ -18,6 +18,7 @@ except Exception as e:
     rag_chain, retriever = None, None
 
 def run_deepeval_audit():
+def run_deepeval_audit():
     try:
         current_dir = os.path.dirname(os.path.abspath(__file__))
         test_file_path = os.path.join(current_dir, "test_deepeval.py")
@@ -31,15 +32,15 @@ def run_deepeval_audit():
             env={**os.environ, "TERM": "dumb"}
         )
         
-        # We check result.stdout because even if tests fail (code 1), 
-        # the table is still printed there.
-        if "Test Results" in result.stdout:
+        # In testing, exit code 1 just means 'some tests failed'. 
+        # We still want to show the table!
+        if result.stdout and "Test Results" in result.stdout:
             return result.stdout
-        else:
-            return f"⚠️ System Error:\n{result.stderr}"
+        
+        return f"⚠️ Audit System Error:\n{result.stderr}"
             
     except Exception as e:
-        return f"❌ Audit Launch Failed: {str(e)}"
+        return f"❌ Failed to launch audit: {str(e)}"
     
 def predict(question):
     if not os.getenv("OPENAI_API_KEY"):
