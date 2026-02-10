@@ -5,7 +5,6 @@ from src.rag_system import initialize_rag
 from src.evaluator import run_evaluation
 
 # 1. Initialize RAG System 
-# Make sure the path matches your 'data' folder structure on GitHub
 try:
     rag_chain, retriever = initialize_rag("data/company_policy.pdf")
 except Exception as e:
@@ -14,7 +13,10 @@ except Exception as e:
 
 def predict(question):
     if not os.getenv("OPENAI_API_KEY"):
-        return "⚠️ Error: OpenAI API Key not found!", pd.DataFrame()
+        return "⚠️ Error: OpenAI API Key not found in Space Secrets!", pd.DataFrame()
+
+    if rag_chain is None:
+        return "⚠️ Error: RAG system failed to initialize. Check PDF path.", pd.DataFrame()
 
     try:
         # 1. Generate the raw answer
@@ -29,8 +31,7 @@ def predict(question):
         report = run_evaluation(question, raw_answer, contexts, ground_truth)
         faithfulness_score = report['faithfulness'].iloc[0]
         
-        # 4. SAFETY GUARDRAIL: Check if the AI stayed on topic
-        # If score is below 0.4, the AI likely hallucinated or was hijacked
+        # 4. SAFETY GUARDRAIL
         if faithfulness_score < 0.4:
             final_answer = (
                 "🛡️ [SECURITY BLOCK]: This response was censored because it failed "
@@ -52,3 +53,26 @@ def predict(question):
 
     except Exception as e:
         return f"Error: {str(e)}", pd.DataFrame()
+
+# --- THE MISSING UI SECTION ---
+with gr.Blocks() as demo:
+    gr.Markdown("# 🛡️ Policy-QA Eval Harness")
+    gr.Markdown("RAG System with automated **RAGAS** safety guardrails.")
+    
+    with gr.Tab("💬 Chat"):
+        input_text = gr.Textbox(label="Your Question", placeholder="Ask a policy question...")
+        output_text = gr.Textbox(label="AI Response", interactive=False)
+        btn = gr.Button("Analyze Policy", variant="primary")
+
+    with gr.Tab("📊 Quality Metrics"):
+        output_table = gr.DataFrame(label="RAGAS Evaluation Scores")
+
+    btn.click(fn=predict, inputs=input_text, outputs=[output_text, output_table])
+
+# --- THE MISSING LAUNCH SECTION ---
+if __name__ == "__main__":
+    demo.launch(
+        server_name="0.0.0.0",
+        server_port=7860,
+        theme=gr.themes.Soft()
+    )
