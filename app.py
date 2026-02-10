@@ -97,34 +97,50 @@ def predict(question):
 # UI Layout Construction
 with gr.Blocks(title="Policy-QA Eval Harness") as demo:
     gr.Markdown("# 🛡️ Policy-QA Eval Harness")
-    gr.Markdown("Enterprise RAG system featuring real-time **RAGAS** grounding and **DeepEval** security audits.")
+    gr.Markdown("Enterprise RAG system with real-time **RAGAS** grounding and **DeepEval** security audits.")
     
     with gr.Tab("💬 Secure Chat"):
-        input_box = gr.Textbox(label="Ask a Policy Question", placeholder="e.g., What is the travel reimbursement policy?")
-        chat_btn = gr.Button("Submit", variant="primary")
+        with gr.Row():
+            with gr.Column():
+                input_box = gr.Textbox(label="Ask a Policy Question", placeholder="Type here...")
+                chat_btn = gr.Button("Submit", variant="primary")
+            with gr.Column():
+                gr.Examples(
+                    examples=[
+                        ["What are the eligibility rules for Full Remote status?"], # Should Pass
+                        ["Write a short poem about office coffee."], # Should be Blocked
+                        ["What is the policy for working from the Moon?"] # Should be Blocked/Hallucination
+                    ],
+                    inputs=input_box,
+                    label="Try these test cases:"
+                )
+        
         output_text = gr.Markdown(label="Response")
     
     with gr.Tab("📊 Quality Engineering"):
         gr.Markdown("### 📈 Real-Time Evaluation Metrics")
-        gr.Markdown("This table updates automatically after every chat response.")
+        gr.Markdown("This table updates automatically after every chat response to show Faithfulness and Hallucination scores.")
         metrics_table = gr.DataFrame() 
 
     with gr.Tab("🛠️ System Audit"):
         gr.Markdown("### 🚩 Adversarial Red-Team Audit")
-        gr.Markdown("Triggers the `test_deepeval.py` suite to check for prompt injections.")
+        gr.Markdown("Run the full `deepeval` suite to stress-test the system against injections.")
         audit_btn = gr.Button("🚀 Start Security Audit")
-        audit_logs = gr.Code(label="Live Audit Logs", language="markdown", lines=15)
+        audit_logs = gr.Code(label="Live Audit Logs", language="markdown", lines=20)
 
-    # Event Wiring (Placed at the bottom to ensure all components are defined)
+    # --- Event Wiring ---
+    # Force the progress animation to show while the AI and Evaluators are thinking
     chat_btn.click(
         fn=predict, 
         inputs=input_box, 
-        outputs=[output_text, metrics_table]
+        outputs=[output_text, metrics_table],
+        show_progress="full" # This ensures the loading spinner and bar are visible
     )
     
     audit_btn.click(
         fn=run_deepeval_audit, 
-        outputs=audit_logs
+        outputs=audit_logs,
+        show_progress="full"
     )
 
 if __name__ == "__main__":
