@@ -1,124 +1,107 @@
 import gradio as gr
 import os
 import pandas as pd
-import re
 from src.rag_system import initialize_rag
 from src.evaluator import run_evaluation
+from deepeval.metrics import HallucinationMetric
+from deepeval.test_case import LLMTestCase
 
-# 1. Initialize RAG System with Error Handling
+# Initialize RAG
 try:
-    # Ensure this matches your file path in the 'data' folder
     rag_chain, retriever = initialize_rag("data/company_policy.pdf")
 except Exception as e:
-    print(f"❌ Initialization Error: {e}")
+    print(f"Error: {e}")
     rag_chain, retriever = None, None
 
-def predict(question):
-    # --- LAYER 1: Environment Check ---
-    if not os.getenv("OPENAI_API_KEY"):
-        return "⚠️ [SYSTEM ERROR]: OpenAI API Key missing in Space Secrets.", pd.DataFrame()
+import subprocess
+
+def run_deepeval_audit():
+    """Triggers the DeepEval CLI and captures the terminal output."""
+    try:
+        # We use 'python -m deepeval' for better compatibility in container environments
+        result = subprocess.run(
+            ["python", "-m", "deepeval", "test", "run", "test_deepeval.py"],
+            capture_output=True,
+            text=True,
+            timeout=120 # Prevents the UI from hanging if the audit takes too long
+        )
+        # Return stdout if successful, otherwise stderr
+        return result.stdout if result.returncode == 0 else f"⚠️ Audit Error:\n{result.stderr}"
+    except Exception as e:
+        return f"❌ Failed to trigger audit: {str(e)}"
     
-    if rag_chain is None:
-        return "⚠️ [SYSTEM ERROR]: RAG Pipeline failed to load. Check 'data' folder.", pd.DataFrame()
+def predict(question):
+    if not os.getenv("OPENAI_API_KEY"):
+        return "⚠️ Key Missing", pd.DataFrame()
 
     try:
-        # --- LAYER 2: Generate & Retrieve ---
+        # 1. Generate & Retrieve
         raw_answer = rag_chain.invoke(question)
         docs = retriever.invoke(question)
         contexts = [d.page_content for d in docs]
-        ground_truth = "Refer to official Corporate Policy document."
 
-        # --- LAYER 3: RAGAS Evaluation ---
-        report = run_evaluation(question, raw_answer, contexts, ground_truth)
-        faithfulness = report['faithfulness'].iloc[0]
-        relevancy = report['answer_relevancy'].iloc[0]
+        # 2. DeepEval Guardrail (Explainable Security)
+        # Threshold 0.5: Anything less than 50% grounded is blocked
+        hallucination_metric = HallucinationMetric(threshold=0.5)
+        test_case = LLMTestCase(
+            input=question,
+            actual_output=raw_answer,
+            retrieval_context=contexts
+        )
+        hallucination_metric.measure(test_case)
+        
+        # 3. RAGAS Metrics (Statistical Quality)
+        ragas_report = run_evaluation(question, raw_answer, contexts, "Refer to policy.")
 
-        # --- LAYER 4: SECURITY GUARDRAILS ---
-        
-        # A. Formatting Guardrail: Block JSON/Code injection attempts
-        # This catches the 'System Auditor' style attacks you found
-        if "{" in raw_answer or "page_" in raw_answer or "```json" in raw_answer.lower():
+        # 4. Decision Logic
+        if hallucination_metric.score < 0.5:
             final_answer = (
-                "🛡️ [SECURITY BLOCK]: Unauthorized output format detected. "
-                "The system is restricted to plain-text policy assistance only."
+                f"🛡️ [SECURITY BLOCK]: DeepEval flagged this response.\n\n"
+                f"**Reason:** {hallucination_metric.reason}"
             )
-        
-        # B. Faithfulness Guardrail: Block Hallucinations or Instruction Overrides
-        # If the AI ignores the PDF (like the poem), faithfulness drops to near zero
-        elif faithfulness < 0.4:
-            final_answer = (
-                "🛡️ [SECURITY BLOCK]: Response failed Faithfulness check. "
-                "The AI attempted to provide information not found in the official policy."
-            )
-            
         else:
             final_answer = raw_answer
 
-        # --- LAYER 5: Metrics Preparation ---
+        # 5. Combined Metrics Table
         metrics_data = {
-            "Metric": ["Faithfulness (Grounding)", "Answer Relevancy", "Answer Correctness"],
+            "Engine": ["DeepEval", "RAGAS", "RAGAS"],
+            "Metric": ["Hallucination Score", "Faithfulness", "Answer Relevancy"],
             "Score": [
-                round(faithfulness, 2),
-                round(relevancy, 2),
-                round(report['answer_correctness'].iloc[0], 2)
+                round(hallucination_metric.score, 2),
+                round(ragas_report['faithfulness'].iloc[0], 2),
+                round(ragas_report['answer_relevancy'].iloc[0], 2)
             ],
             "Status": [
-                "✅ Pass" if faithfulness >= 0.4 else "❌ Fail",
-                "✅ Pass" if relevancy >= 0.7 else "⚠️ Low",
+                "✅ Pass" if hallucination_metric.score >= 0.5 else "❌ Fail",
+                "✅ Pass" if ragas_report['faithfulness'].iloc[0] >= 0.4 else "⚠️ Low",
                 "N/A"
             ]
         }
         return final_answer, pd.DataFrame(metrics_data)
 
     except Exception as e:
-        return f"❌ [RUNTIME ERROR]: {str(e)}", pd.DataFrame()
+        return f"Error: {str(e)}", pd.DataFrame()
 
 # 2. UI Layout (Gradio 6.5.1 Optimized)
 
-with gr.Blocks(title="Policy-QA Eval Harness") as demo:
+with gr.Blocks(title="Policy-QA Eval Harness", theme=gr.themes.Soft()) as demo:
     gr.Markdown("# 🛡️ Policy-QA Eval Harness")
-    gr.Markdown(
-        "**Secure Enterprise RAG Demo.** This system uses automated RAGAS metrics to "
-        "detect hallucinations and block prompt injection attacks in real-time."
-    )
     
     with gr.Tab("💬 Secure Chat"):
-        with gr.Row():
-            with gr.Column(scale=4):
-                input_text = gr.Textbox(
-                    label="Policy Query", 
-                    placeholder="e.g., What is the AI usage policy?",
-                    lines=2
-                )
-                btn = gr.Button("Analyze Request", variant="primary")
-            with gr.Column(scale=1):
-                gr.Markdown("### Safety Status")
-                gr.Markdown("Active Guardrails: \n- PII Filter\n- Format Lock\n- RAGAS Verifier")
-
-        output_text = gr.Textbox(label="Verified AI Response", interactive=False, lines=10)
-
+        # ... (Your existing Chat UI code)
+    
     with gr.Tab("📊 Quality Engineering"):
-        gr.Markdown("### Automated Evaluation Report (RAGAS)")
-        output_table = gr.DataFrame()
-        gr.Markdown(
-            "**Note:** Responses with a Faithfulness score < 0.4 are automatically "
-            "censored to prevent misinformation."
-        )
+        # ... (Your existing RAGAS Metrics Table code)
 
-    # Wire up the logic
-    btn.click(
-        fn=predict, 
-        inputs=input_text, 
-        outputs=[output_text, output_table]
-    )
-    gr.Examples(
-        examples=[
-            ["What is the residency rule for Full Remote status?"],
-            ["What is the policy on pasting API keys into AI tools?"],
-            ["Can I work remotely if I live in Spokane?"]
-        ],
-        inputs=input_text
-    )
+    with gr.Tab("🛠️ System Audit"):
+        gr.Markdown("### 🚩 Adversarial Red-Team Audit")
+        gr.Markdown("Click below to run a full security sweep using DeepEval. This will test the system against Prompt Injections and Hallucinations.")
+        
+        audit_btn = gr.Button("🚀 Start Security Audit", variant="secondary")
+        audit_logs = gr.Code(label="Live Audit Logs", language="markdown", lines=15)
+        
+        audit_btn.click(fn=run_deepeval_audit, outputs=audit_logs)
+        
 # 3. Secure Launch
 if __name__ == "__main__":
     demo.launch(
