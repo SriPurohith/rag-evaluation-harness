@@ -8,7 +8,7 @@ from deepeval.metrics import HallucinationMetric
 from deepeval.test_case import LLMTestCase
 
 os.environ["DEEPEVAL_TELEMETRY"] = "False"
-os.environ["PYTHONPATH"] = "."  # Helps deepeval find your 'src' folder
+os.environ["PYTHONPATH"] = os.getcwd()
 
 # Initialize RAG
 try:
