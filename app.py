@@ -88,18 +88,22 @@ with gr.Blocks(title="Policy-QA Eval Harness", theme=gr.themes.Soft()) as demo:
     gr.Markdown("# 🛡️ Policy-QA Eval Harness")
     
     with gr.Tab("💬 Secure Chat"):
-        # ... (Your existing Chat UI code)
+        # You MUST have code indented here!
+        input_box = gr.Textbox(label="Ask a Policy Question")
+        output_text = gr.Markdown(label="Response")
+        chat_btn = gr.Button("Submit")
+        # Link the button to your predict function
+        chat_btn.click(fn=predict, inputs=input_box, outputs=[output_text])
     
     with gr.Tab("📊 Quality Engineering"):
-        # ... (Your existing RAGAS Metrics Table code)
+        # Code for your RAGAS table goes here
+        gr.Markdown("### 📈 RAGAS Metrics")
+        metrics_table = gr.DataFrame() 
 
     with gr.Tab("🛠️ System Audit"):
         gr.Markdown("### 🚩 Adversarial Red-Team Audit")
-        gr.Markdown("Click below to run a full security sweep using DeepEval. This will test the system against Prompt Injections and Hallucinations.")
-        
-        audit_btn = gr.Button("🚀 Start Security Audit", variant="secondary")
-        audit_logs = gr.Code(label="Live Audit Logs", language="markdown", lines=15)
-        
+        audit_btn = gr.Button("🚀 Start Security Audit")
+        audit_logs = gr.Code(label="Live Audit Logs")
         audit_btn.click(fn=run_deepeval_audit, outputs=audit_logs)
         
 # 3. Secure Launch
