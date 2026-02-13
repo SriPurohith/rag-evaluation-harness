@@ -18,3 +18,8 @@ chroma_db/
 # OS Files
 .DS_Store
 Thumbs.db
+
+# Add this to your .gitignore
+data/chroma_db_multi/
+*.bin
+*.sqlite3
